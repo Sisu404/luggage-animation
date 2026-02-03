@@ -1,0 +1,674 @@
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>Airport Conveyor Animation</title>
+		<style>
+			:root {
+				--bg: #e6f0ff;
+				--belt: #444b55;
+				--belt-edge: #2f353d;
+				--belt-dot: #2b3138;
+				--floor: #cfd6e0;
+				--window-frame: #b5c2d6;
+				--city: #9aa7bd;
+				--cloud: #ffffff;
+				--red: #e34b4b;
+				--green: #4a9b6b;
+				--yellow: #f2c54b;
+				--blue: #3b7fd1;
+			}
+
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			body {
+				min-height: 100vh;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				background: var(--bg);
+				font-family:
+					system-ui,
+					-apple-system,
+					BlinkMacSystemFont,
+					"Segoe UI",
+					sans-serif;
+			}
+
+			.scene {
+				height: 400px;
+				position: relative;
+				overflow: hidden;
+				width: 100%;
+				max-width: 1024px;
+				margin: 0 2rem;
+				border-radius: 18px;
+				box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+				background: linear-gradient(to top, var(--floor) 35%, var(--bg) 35%);
+			}
+
+			/* Background windows / city */
+			.windows {
+				position: absolute;
+				inset: 0 0 35%;
+				display: flex;
+				gap: 12px;
+				padding: 24px 32px 0;
+				width: 95%;
+				margin: 0 2.5% 1rem;
+			}
+
+			.window {
+				flex: 1;
+				border-radius: 12px;
+				border: 4px solid var(--window-frame);
+				background: linear-gradient(to top, #c7d5f0 0%, #f5f8ff 60%);
+				position: relative;
+				overflow: hidden;
+			}
+
+			.city {
+				position: absolute;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				height: 40%;
+				display: flex;
+				align-items: flex-end;
+				gap: 6px;
+				padding: 0 10px 4px;
+			}
+
+			.building {
+				flex: 1;
+				background: var(--city);
+				border-radius: 4px 4px 0 0;
+				opacity: 0.7;
+			}
+
+			.building:nth-child(2) {
+				height: 70%;
+				opacity: 0.8;
+			}
+			.building:nth-child(3) {
+				height: 55%;
+			}
+			.building:nth-child(4) {
+				height: 80%;
+				opacity: 0.9;
+			}
+
+			.cloud {
+				position: absolute;
+				top: 18%;
+				width: 70px;
+				height: 26px;
+				background: var(--cloud);
+				border-radius: 999px;
+				box-shadow:
+					18px 4px 0 var(--cloud),
+					36px 0 0 var(--cloud);
+				opacity: 0.9;
+				animation: cloud-drift 26s linear infinite;
+			}
+
+			.cloud:nth-child(2) {
+				top: 32%;
+				width: 50px;
+				animation-duration: 32s;
+				opacity: 0.8;
+			}
+
+			@keyframes cloud-drift {
+				from {
+					transform: translateX(-120px);
+				}
+				to {
+					transform: translateX(120%);
+				}
+			}
+
+			/* Conveyor belt */
+			.belt-wrapper {
+				position: absolute;
+				left: 0;
+				right: 0;
+				bottom: 00px;
+				height: 120px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				z-index: 1; /* belt stays below luggage */
+			}
+
+			.belt {
+				position: relative;
+				width: 100%;
+				height: 70px;
+				background: var(--belt);
+				border-radius: 18px;
+				box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.08);
+				overflow: hidden;
+				transform-origin: center center;
+				animation: belt-wobble 2.6s ease-in-out infinite;
+			}
+
+			.belt::before,
+			.belt::after {
+				content: "";
+				position: absolute;
+				inset: 0;
+				border-radius: inherit;
+				border: 6px solid var(--belt-edge);
+				pointer-events: none;
+			}
+
+			.belt-track {
+				position: absolute;
+				inset: 16px 10px;
+				display: block;
+				box-sizing: content-box;
+				padding: 0 7px;
+				background-image: radial-gradient(
+					circle at center,
+					var(--belt-dot) 6px,
+					transparent 7px
+				);
+				background-size: 34px 100%;
+				background-repeat: repeat-x;
+				background-position: 0 50%;
+				background-origin: content-box;
+				background-clip: content-box;
+			}
+
+			/* Rotating wheel-like dot */
+			.belt-dot {
+				width: 14px;
+				height: 14px;
+				border-radius: 50%;
+				background: var(--belt-dot);
+				display: none;
+
+				/* Inner shadow to show rotation */
+				box-shadow:
+					inset 3px 0 3px rgba(0, 0, 0, 0.45),
+					0 0 0 2px rgba(0, 0, 0, 0.35);
+
+				animation: wheel-combined 0.7s linear infinite reverse;
+			}
+
+			/* Combined rotation + wobble */
+			@keyframes wheel-combined {
+				0% {
+					transform: rotate(0deg) translateY(0);
+				}
+				25% {
+					transform: rotate(90deg) translateY(-1px);
+				}
+				50% {
+					transform: rotate(180deg) translateY(0);
+				}
+				75% {
+					transform: rotate(270deg) translateY(1px);
+				}
+				100% {
+					transform: rotate(360deg) translateY(0);
+				}
+			}
+
+			@keyframes belt-wobble {
+				0%,
+				100% {
+					transform: translateY(0) rotate(0deg);
+				}
+				25% {
+					transform: translateY(-1px) rotate(-0.15deg);
+				}
+				50% {
+					transform: translateY(0.5px) rotate(0.1deg);
+				}
+				75% {
+					transform: translateY(-0.5px) rotate(0.12deg);
+				}
+			}
+
+			/* Luggage row */
+			.luggage-row {
+				position: absolute;
+				left: 5%;
+				right: 5%;
+				bottom: 98px; /* was 120px — move it down onto the belt */
+				height: 120px;
+				pointer-events: none;
+				overflow: visible;
+			}
+
+			.luggage-track {
+				position: absolute;
+				left: 0;
+				bottom: 0;
+				height: 100%;
+				width: max-content;
+				display: flex;
+				align-items: flex-end;
+				gap: 120px;
+				padding-right: 120px;
+				animation: luggage-loop 10s linear infinite;
+			}
+
+			.luggage {
+				position: relative;
+				flex-shrink: 0;
+				transform-origin: center bottom;
+				animation: subtle-bob 1.8s ease-in-out infinite;
+			}
+
+			@keyframes luggage-loop {
+				from {
+					transform: translateX(0);
+				}
+				to {
+					transform: translateX(calc(-100% - 120px));
+				}
+			}
+
+			@keyframes subtle-bob {
+				0%,
+				100% {
+					transform: translateY(0);
+				}
+				50% {
+					transform: translateY(-2px);
+				}
+			}
+
+			/* Individual luggage styles */
+			.case-red {
+				width: 80px;
+				height: 90px;
+				background: linear-gradient(135deg, #f06a6a, var(--red));
+				border-radius: 12px;
+				box-shadow: 0 10px 18px rgba(0, 0, 0, 0.25);
+				position: relative;
+			}
+
+			.case-red::before {
+				content: "";
+				position: absolute;
+				top: -14px;
+				left: 50%;
+				width: 40px;
+				height: 14px;
+				transform: translateX(-50%);
+				border-radius: 999px 999px 0 0;
+				border: 4px solid #c63b3b;
+				border-bottom: none;
+				background: #fbe3e3;
+			}
+
+			.case-red::after {
+				content: "";
+				position: absolute;
+				inset: 10px 12px;
+				border-radius: 8px;
+				border: 2px solid rgba(255, 255, 255, 0.4);
+			}
+
+			.case-red .wheel,
+			.case-yellow .wheel,
+			.case-blue .wheel {
+				position: absolute;
+				bottom: -10px;
+				width: 14px;
+				height: 14px;
+				border-radius: 999px;
+				background: #222831;
+				box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+			}
+
+			.case-red .wheel.left,
+			.case-yellow .wheel.left,
+			.case-blue .wheel.left {
+				left: 10px;
+			}
+
+			.case-red .wheel.right,
+			.case-yellow .wheel.right,
+			.case-blue .wheel.right {
+				right: 10px;
+			}
+
+			.duffel-green {
+				width: 110px;
+				height: 60px;
+				background: linear-gradient(135deg, #5fbf7d, var(--green));
+				border-radius: 40px;
+				box-shadow: 0 10px 18px rgba(0, 0, 0, 0.25);
+				position: relative;
+        top:5px;
+			}
+
+			.duffel-green::before {
+				content: "";
+				position: absolute;
+				top: -12px;
+				left: 50%;
+				width: 50px;
+				height: 12px;
+				transform: translateX(-50%);
+				border-radius: 10px;
+				border: 4px solid #2f6b46;
+				border-bottom: none;
+				background: #e7f7ec;
+			}
+/* 
+	content: "";
+				position: absolute;
+				top: -18px;
+				left: 50%;
+				width: 70px;
+				height: 30px;
+				transform: translateX(-50%);
+				border-radius: 999px;
+				border: 4px solid #2f6b46;
+				border-bottom: none;
+				background: #e7f7ec;
+
+
+*/
+			.duffel-green::after {
+				content: "";
+				position: absolute;
+				inset: 10px 18px;
+				border-radius: 999px;
+				border: 2px solid rgba(255, 255, 255, 0.45);
+			}
+
+			.case-yellow {
+				width: 70px;
+				height: 100px;
+				background: linear-gradient(135deg, #ffd86a, var(--yellow));
+				border-radius: 12px;
+				box-shadow: 0 10px 18px rgba(0, 0, 0, 0.25);
+				position: relative;
+			}
+
+			.case-yellow::before {
+				content: "";
+				position: absolute;
+				top: -18px;
+				left: 50%;
+				width: 32px;
+				height: 18px;
+				transform: translateX(-50%);
+				border-radius: 999px 999px 0 0;
+				border: 4px solid #c79a2f;
+				border-bottom: none;
+				background: #fff6dd;
+			}
+
+			.case-yellow .ridge {
+				position: absolute;
+				left: 10px;
+				right: 10px;
+				height: 4px;
+				border-radius: 999px;
+				background: rgba(255, 255, 255, 0.55);
+			}
+
+			.case-yellow .ridge:nth-child(1) {
+				top: 20px;
+			}
+			.case-yellow .ridge:nth-child(2) {
+				top: 34px;
+			}
+			.case-yellow .ridge:nth-child(3) {
+				top: 48px;
+			}
+			.case-yellow .ridge:nth-child(4) {
+				top: 62px;
+			}
+			.case-yellow .ridge:nth-child(5) {
+				top: 76px;
+			}
+
+			.case-blue {
+				width: 80px;
+				height: 100px;
+				background: linear-gradient(135deg, #5c9df0, var(--blue));
+				border-radius: 12px;
+				box-shadow: 0 10px 18px rgba(0, 0, 0, 0.25);
+				position: relative;
+			}
+
+			.case-blue::before {
+				content: "";
+				position: absolute;
+				top: -18px;
+				left: 50%;
+				width: 34px;
+				height: 18px;
+				transform: translateX(-50%);
+				border-radius: 999px 999px 0 0;
+				border: 4px solid #26548f;
+				border-bottom: none;
+				background: #e3f0ff;
+			}
+
+			.case-blue .stripe {
+				position: absolute;
+				left: 10px;
+				right: 10px;
+				height: 5px;
+				border-radius: 999px;
+				background: rgba(240, 248, 255, 0.9);
+			}
+
+			.case-blue .stripe:nth-child(1) {
+				top: 22px;
+			}
+			.case-blue .stripe:nth-child(2) {
+				top: 38px;
+			}
+			.case-blue .stripe:nth-child(3) {
+				top: 54px;
+			}
+			.case-blue .stripe:nth-child(4) {
+				top: 70px;
+			}
+
+			.case-red.rotate-90,
+			.case-blue.rotate-90 {
+				transform: translateY(12px) rotate(90deg);
+				transform-origin: center center;
+			}
+      
+      .case-blue.rotate-90 {
+        transform: translateY(18px) rotate(90deg);
+      }
+
+			/* Slight parallax: second copy of track for seamless loop */
+			.luggage-track.clone {
+				left: calc(100% + 120px);
+			}
+		</style>
+	</head>
+	<body>
+		<div class="scene">
+			<div class="windows">
+				<div class="window">
+					<div class="cloud"></div>
+					<div class="cloud"></div>
+					<div class="city">
+						<div class="building" style="height: 60%"></div>
+						<div class="building"></div>
+						<div class="building"></div>
+						<div class="building"></div>
+					</div>
+				</div>
+				<div class="window">
+					<div class="cloud"></div>
+					<div class="city">
+						<div class="building" style="height: 50%"></div>
+						<div class="building"></div>
+						<div class="building"></div>
+						<div class="building"></div>
+					</div>
+				</div>
+				<div class="window">
+					<div class="cloud"></div>
+					<div class="city">
+						<div class="building" style="height: 55%"></div>
+						<div class="building"></div>
+						<div class="building"></div>
+						<div class="building"></div>
+					</div>
+				</div>
+			</div>
+
+			<div class="luggage-row">
+				<!-- Track 1 -->
+				<div class="luggage-track">
+					<div class="luggage">
+						<div class="case-red rotate-90">
+							<div class="wheel left"></div>
+							<div class="wheel right"></div>
+						</div>
+					</div>
+					<div class="luggage">
+						<div class="duffel-green"></div>
+					</div>
+					<div class="luggage">
+						<div class="case-yellow">
+							<div class="ridge"></div>
+							<div class="ridge"></div>
+							<div class="ridge"></div>
+							<div class="ridge"></div>
+							<div class="ridge"></div>
+							<div class="wheel left"></div>
+							<div class="wheel right"></div>
+						</div>
+					</div>
+					<div class="luggage">
+						<div class="case-blue rotate-90">
+							<div class="stripe"></div>
+							<div class="stripe"></div>
+							<div class="stripe"></div>
+							<div class="stripe"></div>
+							<div class="wheel left"></div>
+							<div class="wheel right"></div>
+						</div>
+					</div>
+					<div class="luggage">
+						<div class="case-red">
+							<div class="wheel left"></div>
+							<div class="wheel right"></div>
+						</div>
+					</div>
+					<div class="luggage">
+						<div class="duffel-green"></div>
+					</div>
+					<div class="luggage">
+						<div class="case-blue">
+							<div class="stripe"></div>
+							<div class="stripe"></div>
+							<div class="stripe"></div>
+							<div class="stripe"></div>
+							<div class="wheel left"></div>
+							<div class="wheel right"></div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Track 2 (clone for seamless loop) -->
+				<div class="luggage-track clone">
+					<div class="luggage">
+						<div class="case-red rotate-90">
+							<div class="wheel left"></div>
+							<div class="wheel right"></div>
+						</div>
+					</div>
+					<div class="luggage">
+						<div class="duffel-green"></div>
+					</div>
+					<div class="luggage">
+						<div class="case-yellow">
+							<div class="ridge"></div>
+							<div class="ridge"></div>
+							<div class="ridge"></div>
+							<div class="ridge"></div>
+							<div class="ridge"></div>
+							<div class="wheel left"></div>
+							<div class="wheel right"></div>
+						</div>
+					</div>
+					<div class="luggage">
+						<div class="case-blue rotate-90">
+							<div class="stripe"></div>
+							<div class="stripe"></div>
+							<div class="stripe"></div>
+							<div class="stripe"></div>
+							<div class="wheel left"></div>
+							<div class="wheel right"></div>
+						</div>
+					</div>
+					<div class="luggage">
+						<div class="case-red">
+							<div class="wheel left"></div>
+							<div class="wheel right"></div>
+						</div>
+					</div>
+					<div class="luggage">
+						<div class="duffel-green"></div>
+					</div>
+					<div class="luggage">
+						<div class="case-blue">
+							<div class="stripe"></div>
+							<div class="stripe"></div>
+							<div class="stripe"></div>
+							<div class="stripe"></div>
+							<div class="wheel left"></div>
+							<div class="wheel right"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="belt-wrapper">
+				<div class="belt">
+					<div class="belt-track">
+						<!-- Just enough dots to fill width; animation loops -->
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+						<div class="belt-dot"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
